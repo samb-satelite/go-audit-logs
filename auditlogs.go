@@ -23,8 +23,7 @@ type AuditLog struct {
 	Before     map[string]interface{} `json:"before"`
 	After      map[string]interface{} `json:"after"`
 	ActionBy   string                 `json:"actionBy"`
-	Action     string                 `json:"action"`
-	Timestamp  time.Time              `json:"timestamp"`
+	ActionTime time.Time              `json:"timestamp"`
 }
 
 type AuditLogClient struct {
@@ -74,7 +73,7 @@ func NewAuditLogClient() (*AuditLogClient, error) {
 }
 
 func (c *AuditLogClient) PublishAuditLog(log AuditLog) error {
-	log.Timestamp = time.Now()
+	log.ActionTime = time.Now()
 	payload, err := json.Marshal(log)
 	if err != nil {
 		return fmt.Errorf("failed to marshal audit log: %w", err)
