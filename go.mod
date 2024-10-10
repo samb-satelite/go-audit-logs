@@ -1,4 +1,4 @@
-module github.com/samb-satelite/go-audit-logs.git
+module github.com/samb-satelite/go-audit-logs
 
 go 1.22.4
 
