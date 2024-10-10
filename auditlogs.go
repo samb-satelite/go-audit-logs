@@ -17,13 +17,13 @@ const (
 )
 
 type AuditLog struct {
-	Module     string                 `json:"module"`
-	ActionType string                 `json:"actionType"`
-	SearchKey  string                 `json:"searchKey"`
-	Before     map[string]interface{} `json:"before"`
-	After      map[string]interface{} `json:"after"`
-	ActionBy   string                 `json:"actionBy"`
-	ActionTime time.Time              `json:"timestamp"`
+	Module     string `json:"module"`
+	ActionType string `json:"actionType"`
+	SearchKey  string `json:"searchKey"`
+	Before     string `json:"before"`
+	After      string `json:"after"`
+	ActionBy   string `json:"actionBy"`
+	ActionTime time.Time `json:"timestamp"`
 }
 
 type AuditLogClient struct {
