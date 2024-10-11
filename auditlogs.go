@@ -96,11 +96,11 @@ func (c *AuditLogClient) PublishAuditLog(log AuditLog) error {
 	return nil
 }
 
-func (c *AuditLogClient) ConsumeAuditLogs(handler func(AuditLog)) error {
+func (c *AuditLogClient) ConsumeAuditLogs(handler func(AuditLog, func(bool))) error {
 	msgs, err := c.channel.Consume(
 		TopicName, // queue
 		"",        // consumer
-		true,      // auto-ack
+		false,     // auto-ack (set to false for manual ack)
 		false,     // exclusive
 		false,     // no-local
 		false,     // no-wait
@@ -118,7 +118,20 @@ func (c *AuditLogClient) ConsumeAuditLogs(handler func(AuditLog)) error {
 				log.Printf("Error unmarshaling message: %v", err)
 				continue
 			}
-			handler(auditLog)
+
+			handler(auditLog, func(ack bool) {
+				if ack {
+					// Process acknowledgment
+					if err := msg.Ack(false); err != nil {
+						log.Printf("Failed to acknowledge message: %v", err)
+					}
+				} else {
+					// Return the message back to the queue
+					if err := msg.Nack(false, true); err != nil {
+						log.Printf("Failed to nack message: %v", err)
+					}
+				}
+			})
 		}
 	}()
 

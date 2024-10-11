@@ -174,9 +174,12 @@ func main() {
 		}
 
 		if err := db.Create(&auditLogModel).Error; err != nil {
-			fmt.Printf("Failed to save audit log to the database: %v", err)
+			fmt.Printf("Failed to save audit log to the database: %v\n", err)
+			ack(false) // Return the message back to the queue
+			return
 		} else {
 			fmt.Printf("Saved audit log to the database: %+v\n", auditLogModel)
+			ack(true) // Ack if successful
 		}
 	})
 
