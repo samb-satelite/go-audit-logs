@@ -153,7 +153,8 @@ func main() {
 	}
 	defer client.Close()
 
-	err = client.ConsumeAuditLogs(func(log auditlogs.AuditLog, ack func(bool)) {
+	consumerName := "AuditLogCunsumer1"
+	err = client.ConsumeAuditLogs(&consumerName, func(log auditlogs.AuditLog, ack func(bool)) {
 
 		// Format ActionTime as a string
 		actionTime := log.ActionTime.Format("2006-01-02 15:04:05")
