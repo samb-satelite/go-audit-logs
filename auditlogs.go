@@ -96,15 +96,20 @@ func (c *AuditLogClient) PublishAuditLog(log AuditLog) error {
 	return nil
 }
 
-func (c *AuditLogClient) ConsumeAuditLogs(handler func(AuditLog, func(bool))) error {
+func (c *AuditLogClient) ConsumeAuditLogs(consumerName *string, handler func(AuditLog, func(bool))) error {
+	if consumerName == nil {
+		defaultName := "default_consumer"
+		consumerName = &defaultName
+	}
+
 	msgs, err := c.channel.Consume(
-		TopicName, // queue
-		"",        // consumer
-		false,     // auto-ack (set to false for manual ack)
-		false,     // exclusive
-		false,     // no-local
-		false,     // no-wait
-		nil,       // args
+		TopicName,  // queue
+		*consumerName, // consumer name
+		false,      // auto-ack (set to false for manual ack)
+		false,      // exclusive
+		false,      // no-local
+		false,      // no-wait
+		nil,        // args
 	)
 	if err != nil {
 		return fmt.Errorf("failed to register a consumer: %w", err)
@@ -135,7 +140,7 @@ func (c *AuditLogClient) ConsumeAuditLogs(handler func(AuditLog, func(bool))) er
 		}
 	}()
 
-	log.Println("Waiting for audit log messages. To exit press CTRL+C")
+	log.Printf("Consumer %s is waiting for audit log messages. To exit press CTRL+C", *consumerName)
 	return nil
 }
 
