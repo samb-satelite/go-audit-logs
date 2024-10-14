@@ -16,6 +16,7 @@ const (
 	TopicName = "audit_logs"
 )
 
+// AuditLog represents a single audit log entry.
 type AuditLog struct {
 	Module     string    `json:"module"`
 	ActionType string    `json:"actionType"`
@@ -26,13 +27,16 @@ type AuditLog struct {
 	ActionTime time.Time `json:"timestamp"`
 }
 
-var auditLogClient *AuditLogClient
-
+// AuditLogClient manages the connection and channel for RabbitMQ.
 type AuditLogClient struct {
 	connection *amqp.Connection
 	channel    *amqp.Channel
 }
 
+// Global instance of AuditLogClient
+var auditLogClient *AuditLogClient
+
+// InitAuditLogClient initializes the global AuditLogClient.
 func InitAuditLogClient() error {
 	if err := godotenv.Load(); err != nil {
 		log.Println("Warning: Could not load .env file, using environment variables from the host")
@@ -54,15 +58,14 @@ func InitAuditLogClient() error {
 		return fmt.Errorf("failed to open a channel: %w", err)
 	}
 
-	_, err = ch.QueueDeclare(
+	if _, err := ch.QueueDeclare(
 		TopicName, // name
 		true,      // durable
 		false,     // delete when unused
 		false,     // exclusive
 		false,     // no-wait
 		nil,       // arguments
-	)
-	if err != nil {
+	); err != nil {
 		ch.Close()
 		conn.Close()
 		return fmt.Errorf("failed to declare a queue: %w", err)
@@ -76,6 +79,7 @@ func InitAuditLogClient() error {
 	return nil
 }
 
+// PublishAuditLog sends an audit log to the RabbitMQ queue.
 func (c *AuditLogClient) PublishAuditLog(log AuditLog) error {
 	log.ActionTime = time.Now()
 	payload, err := json.Marshal(log)
@@ -83,7 +87,7 @@ func (c *AuditLogClient) PublishAuditLog(log AuditLog) error {
 		return fmt.Errorf("failed to marshal audit log: %w", err)
 	}
 
-	err = c.channel.Publish(
+	if err := c.channel.Publish(
 		"",        // exchange
 		TopicName, // routing key
 		false,     // mandatory
@@ -92,14 +96,14 @@ func (c *AuditLogClient) PublishAuditLog(log AuditLog) error {
 			ContentType: "application/json",
 			Body:        payload,
 		},
-	)
-	if err != nil {
+	); err != nil {
 		return fmt.Errorf("failed to publish a message: %w", err)
 	}
 
 	return nil
 }
 
+// ConsumeAuditLogs starts consuming audit logs from the queue.
 func (c *AuditLogClient) ConsumeAuditLogs(consumerName *string, handler func(AuditLog, func(bool))) error {
 	if consumerName == nil {
 		defaultName := "default_consumer"
@@ -122,20 +126,17 @@ func (c *AuditLogClient) ConsumeAuditLogs(consumerName *string, handler func(Aud
 	go func() {
 		for msg := range msgs {
 			var auditLog AuditLog
-			err := json.Unmarshal(msg.Body, &auditLog)
-			if err != nil {
+			if err := json.Unmarshal(msg.Body, &auditLog); err != nil {
 				log.Printf("Error unmarshaling message: %v", err)
 				continue
 			}
 
 			handler(auditLog, func(ack bool) {
 				if ack {
-					// Process acknowledgment
 					if err := msg.Ack(false); err != nil {
 						log.Printf("Failed to acknowledge message: %v", err)
 					}
 				} else {
-					// Return the message back to the queue
 					if err := msg.Nack(false, true); err != nil {
 						log.Printf("Failed to nack message: %v", err)
 					}
@@ -148,6 +149,7 @@ func (c *AuditLogClient) ConsumeAuditLogs(consumerName *string, handler func(Aud
 	return nil
 }
 
+// Close closes the channel and connection of the AuditLogClient.
 func (c *AuditLogClient) Close() {
 	if c.channel != nil {
 		c.channel.Close()
@@ -157,7 +159,7 @@ func (c *AuditLogClient) Close() {
 	}
 }
 
-// CloseGlobalClient will close the global audit log client
+// CloseGlobalClient closes the global audit log client.
 func CloseGlobalClient() {
 	if auditLogClient != nil {
 		auditLogClient.Close()
