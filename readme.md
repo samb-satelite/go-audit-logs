@@ -52,10 +52,10 @@ func main() {
 	}
 
 	// Create a new AuditLog client
-	if err := InitAuditLogClient(); err != nil {
+	if err := auditlogs.InitAuditLogClient(); err != nil {
 		log.Fatalf("Failed to initialize RabbitMQ client: %v", err)
 	}
-	defer CloseGlobalClient()
+	defer auditlogs.CloseGlobalClient()
 
 	userBefore := User{
 		Email: "user@example.com",
@@ -146,10 +146,10 @@ func main() {
 		log.Fatalf("Failed to migrate database schema: %v", err)
 	}
 
-	if err := InitAuditLogClient(); err != nil {
+	if err := auditlogs.InitAuditLogClient(); err != nil {
 		log.Fatalf("Failed to initialize RabbitMQ client: %v", err)
 	}
-	defer CloseGlobalClient()
+	defer auditlogs.CloseGlobalClient()
 
 	consumerName := "AuditLogCunsumer1"
 	err = auditlogs.AuditLogClient.ConsumeAuditLogs(&consumerName, func(log auditlogs.AuditLog, ack func(bool)) {
