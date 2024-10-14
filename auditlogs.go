@@ -104,10 +104,23 @@ func PublishAuditLog(log AuditLog) error {
 }
 
 // ConsumeAuditLogs starts consuming audit logs from the queue.
-func ConsumeAuditLogs(consumerName *string, handler func(AuditLog, func(bool))) error {
+func ConsumeAuditLogs(consumerName *string, handler func(AuditLog, func(bool)), prefetchCount *int) error {
 	if consumerName == nil {
 		defaultName := "default_consumer"
 		consumerName = &defaultName
+	}
+
+	// Set the prefetch count based on the value provided
+	var effectivePrefetchCount int
+	if prefetchCount != nil {
+		effectivePrefetchCount = *prefetchCount
+	} else {
+		effectivePrefetchCount = 50 // Default value
+	}
+
+	// Set the QoS with the effective prefetch count
+	if err := auditLogClient.channel.Qos(effectivePrefetchCount, 0, false); err != nil {
+		return fmt.Errorf("failed to set QoS: %w", err)
 	}
 
 	msgs, err := auditLogClient.channel.Consume(
@@ -148,6 +161,7 @@ func ConsumeAuditLogs(consumerName *string, handler func(AuditLog, func(bool))) 
 	log.Printf("Consumer %s is waiting for audit log messages. To exit press CTRL+C", *consumerName)
 	return nil
 }
+
 
 // Close closes the channel and connection of the AuditLogClient.
 func Close() {
