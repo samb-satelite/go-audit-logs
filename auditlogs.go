@@ -54,7 +54,7 @@ func InitAuditLogClient() error {
 
 	ch, err := conn.Channel()
 	if err != nil {
-		conn.Close()
+		_ = conn.Close()
 		return fmt.Errorf("failed to open a channel: %w", err)
 	}
 
@@ -66,8 +66,8 @@ func InitAuditLogClient() error {
 		false,     // no-wait
 		nil,       // arguments
 	); err != nil {
-		ch.Close()
-		conn.Close()
+		_ = ch.Close()
+		_ = conn.Close()
 		return fmt.Errorf("failed to declare a queue: %w", err)
 	}
 
@@ -80,14 +80,14 @@ func InitAuditLogClient() error {
 }
 
 // PublishAuditLog sends an audit log to the RabbitMQ queue.
-func (c *AuditLogClient) PublishAuditLog(log AuditLog) error {
+func PublishAuditLog(log AuditLog) error {
 	log.ActionTime = time.Now()
 	payload, err := json.Marshal(log)
 	if err != nil {
 		return fmt.Errorf("failed to marshal audit log: %w", err)
 	}
 
-	if err := c.channel.Publish(
+	if err := auditLogClient.channel.Publish(
 		"",        // exchange
 		TopicName, // routing key
 		false,     // mandatory
@@ -104,13 +104,13 @@ func (c *AuditLogClient) PublishAuditLog(log AuditLog) error {
 }
 
 // ConsumeAuditLogs starts consuming audit logs from the queue.
-func (c *AuditLogClient) ConsumeAuditLogs(consumerName *string, handler func(AuditLog, func(bool))) error {
+func ConsumeAuditLogs(consumerName *string, handler func(AuditLog, func(bool))) error {
 	if consumerName == nil {
 		defaultName := "default_consumer"
 		consumerName = &defaultName
 	}
 
-	msgs, err := c.channel.Consume(
+	msgs, err := auditLogClient.channel.Consume(
 		TopicName,  // queue
 		*consumerName, // consumer name
 		false,      // auto-ack (set to false for manual ack)
@@ -150,18 +150,16 @@ func (c *AuditLogClient) ConsumeAuditLogs(consumerName *string, handler func(Aud
 }
 
 // Close closes the channel and connection of the AuditLogClient.
-func (c *AuditLogClient) Close() {
-	if c.channel != nil {
-		c.channel.Close()
+func Close() {
+	if auditLogClient.channel != nil {
+		_ = auditLogClient.channel.Close()
 	}
-	if c.connection != nil {
-		c.connection.Close()
+	if auditLogClient.connection != nil {
+		_ = auditLogClient.connection.Close()
 	}
 }
 
 // CloseGlobalClient closes the global audit log client.
 func CloseGlobalClient() {
-	if auditLogClient != nil {
-		auditLogClient.Close()
-	}
+	Close()
 }

@@ -81,7 +81,7 @@ func main() {
 			ActionBy:   "admin",
 		}
 
-		if err :=  auditlogs.AuditLogClient.PublishAuditLog(auditLog); err != nil {
+		if err :=  auditlogs.PublishAuditLog(auditLog); err != nil {
 			log.Printf("Failed to publish audit log: %v", err)
 		} else {
 			fmt.Printf("Published audit log: %+v\n", auditLog)
@@ -152,7 +152,7 @@ func main() {
 	defer auditlogs.CloseGlobalClient()
 
 	consumerName := "AuditLogCunsumer1"
-	err = auditlogs.AuditLogClient.ConsumeAuditLogs(&consumerName, func(log auditlogs.AuditLog, ack func(bool)) {
+	err = auditlogs.ConsumeAuditLogs(&consumerName, func(log auditlogs.AuditLog, ack func(bool)) {
 
 		// Format ActionTime as a string
 		actionTime := log.ActionTime.Format("2006-01-02 15:04:05")
