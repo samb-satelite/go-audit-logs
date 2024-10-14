@@ -52,11 +52,10 @@ func main() {
 	}
 
 	// Create a new AuditLog client
-	client, err := auditlogs.NewAuditLogClient()
-	if err != nil {
-		log.Fatalf("Failed to create audit log client: %v", err)
+	if err := InitAuditLogClient(); err != nil {
+		log.Fatalf("Failed to initialize RabbitMQ client: %v", err)
 	}
-	defer client.Close()
+	defer CloseGlobalClient()
 
 	userBefore := User{
 		Email: "user@example.com",
@@ -82,7 +81,7 @@ func main() {
 			ActionBy:   "admin",
 		}
 
-		if err := client.PublishAuditLog(auditLog); err != nil {
+		if err :=  auditlogs.AuditLogClient.PublishAuditLog(auditLog); err != nil {
 			log.Printf("Failed to publish audit log: %v", err)
 		} else {
 			fmt.Printf("Published audit log: %+v\n", auditLog)
@@ -147,14 +146,13 @@ func main() {
 		log.Fatalf("Failed to migrate database schema: %v", err)
 	}
 
-	client, err := auditlogs.NewAuditLogClient()
-	if err != nil {
-		log.Fatalf("Failed to create audit log client: %v", err)
+	if err := InitAuditLogClient(); err != nil {
+		log.Fatalf("Failed to initialize RabbitMQ client: %v", err)
 	}
-	defer client.Close()
+	defer CloseGlobalClient()
 
 	consumerName := "AuditLogCunsumer1"
-	err = client.ConsumeAuditLogs(&consumerName, func(log auditlogs.AuditLog, ack func(bool)) {
+	err = auditlogs.AuditLogClient.ConsumeAuditLogs(&consumerName, func(log auditlogs.AuditLog, ack func(bool)) {
 
 		// Format ActionTime as a string
 		actionTime := log.ActionTime.Format("2006-01-02 15:04:05")

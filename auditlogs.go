@@ -17,39 +17,41 @@ const (
 )
 
 type AuditLog struct {
-	Module     string `json:"module"`
-	ActionType string `json:"actionType"`
-	SearchKey  string `json:"searchKey"`
-	Before     string `json:"before"`
-	After      string `json:"after"`
-	ActionBy   string `json:"actionBy"`
+	Module     string    `json:"module"`
+	ActionType string    `json:"actionType"`
+	SearchKey  string    `json:"searchKey"`
+	Before     string    `json:"before"`
+	After      string    `json:"after"`
+	ActionBy   string    `json:"actionBy"`
 	ActionTime time.Time `json:"timestamp"`
 }
+
+var auditLogClient *AuditLogClient
 
 type AuditLogClient struct {
 	connection *amqp.Connection
 	channel    *amqp.Channel
 }
 
-func NewAuditLogClient() (*AuditLogClient, error) {
+func InitAuditLogClient() error {
 	if err := godotenv.Load(); err != nil {
 		log.Println("Warning: Could not load .env file, using environment variables from the host")
 	}
 
 	rabbitMQURL := os.Getenv("RABBITMQ_URL")
 	if rabbitMQURL == "" {
-		return nil, errors.New("RABBITMQ_URL must be set in the environment variables or .env file")
+		return errors.New("RABBITMQ_URL must be set in the environment variables or .env file")
 	}
 
 	conn, err := amqp.Dial(rabbitMQURL)
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to RabbitMQ: %w", err)
+		return fmt.Errorf("failed to connect to RabbitMQ: %w", err)
 	}
 
 	ch, err := conn.Channel()
 	if err != nil {
 		conn.Close()
-		return nil, fmt.Errorf("failed to open a channel: %w", err)
+		return fmt.Errorf("failed to open a channel: %w", err)
 	}
 
 	_, err = ch.QueueDeclare(
@@ -63,13 +65,15 @@ func NewAuditLogClient() (*AuditLogClient, error) {
 	if err != nil {
 		ch.Close()
 		conn.Close()
-		return nil, fmt.Errorf("failed to declare a queue: %w", err)
+		return fmt.Errorf("failed to declare a queue: %w", err)
 	}
 
-	return &AuditLogClient{
+	auditLogClient = &AuditLogClient{
 		connection: conn,
 		channel:    ch,
-	}, nil
+	}
+
+	return nil
 }
 
 func (c *AuditLogClient) PublishAuditLog(log AuditLog) error {
@@ -150,5 +154,12 @@ func (c *AuditLogClient) Close() {
 	}
 	if c.connection != nil {
 		c.connection.Close()
+	}
+}
+
+// CloseGlobalClient will close the global audit log client
+func CloseGlobalClient() {
+	if auditLogClient != nil {
+		auditLogClient.Close()
 	}
 }
