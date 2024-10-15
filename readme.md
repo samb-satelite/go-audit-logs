@@ -151,9 +151,11 @@ func main() {
 	}
 	defer auditlogs.CloseGlobalClient()
 
-	consumerName := "AuditLogCunsumer1"
-	err = auditlogs.ConsumeAuditLogs(&consumerName, func(log auditlogs.AuditLog, ack func(bool)) {
+	consumerName := "AuditLogConsumer1"
+	// Set prefetch count (you can set it to 0 if you want to use the default)
+	prefetchCount := 50
 
+	err = auditlogs.ConsumeAuditLogs(&consumerName, func(log auditlogs.AuditLog, ack func(bool)) {
 		// Format ActionTime as a string
 		actionTime := log.ActionTime.Format("2006-01-02 15:04:05")
 
@@ -180,7 +182,7 @@ func main() {
 			fmt.Printf("Saved audit log to the database: %+v\n", auditLogModel)
 			ack(true) // Ack if successful
 		}
-	})
+	}, &prefetchCount) // Pass the prefetch count
 
 	if err != nil {
 		log.Fatalf("Failed to start consuming audit logs: %v", err)
